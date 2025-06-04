@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Player</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="welcome-panel" id="welcomePanel">
+    <div class="welcome-content">
+      <div class="welcome-logo">MusicPlayer</div>
+      <div class="welcome-subtitle">Find, play, and download your favorite music in one place.</div>
+      <div class="welcome-about">
+        <p>MusicPlayer adalah aplikasi web sederhana yang memungkinkan Anda mencari lagu dari YouTube, memutarnya langsung di browser Anda, dan mengunduhnya dalam format MP3.</p>
+      </div>
+      <div class="welcome-thanks">
+        <div class="thanks-title">Special Thanks</div>
+        <ul class="thanks-list">
+          <li><strong>Siputz API</strong> - Untuk menyediakan Api </li>
+          <li><strong>FlowFalcon</strong> - Pengemba</li>
+          <li><strong>Aka</strong> - Pengembang Dan Update Source Web</li>
+          <li><strong>Anda</strong> - Untuk menggunakan aplikasi kami</li>
+        </ul>
+      </div>
+      <button id="welcomeCloseBtn" class="welcome-btn">Lanjutkan ke Music Player</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <a href="#" class="logo" id="logoLink">MusicPlayer</a>
+      <p class="site-description">Temukan, putar, dan unduh musik favorit Anda dengan mudah.</p>
+      <div class="search-container">
+        <input type="text" class="search-input" placeholder="Cari lagu, artis, atau album..." />
+        <button class="search-btn"><i class="fas fa-search"></i> Cari</button>
+      </div>
+      <button class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+
+    <div class="recommended-section" id="recommendedSection">
+      <h2 class="section-title"><i class="fas fa-star"></i> Rekomendasi Untukmu</h2>
+      <div class="recommended-container" id="recommendedList"></div>
+    </div>
+
+    <div class="history-section" id="historySection">
+      <h2 class="section-title"><i class="fas fa-history"></i> Terakhir Diputar</h2>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <div class="results-section" id="resultsSection">
+      <h2 class="section-title"><i class="fas fa-music"></i> <span id="searchResultTitle">Hasil Pencarian</span></h2>
+      <div class="results-container" id="results"></div>
+    </div>
+
+    <div class="contributors-section" id="contributorsSection" style="display: none;">
+      <h2 class="section-title"><i class="fas fa-users"></i> Kontributor</h2>
+      <div class="contributors-grid" id="contributorsGrid"></div>
+    </div>
+
+    <div class="loading">
+      <div class="loader"></div>
+      <div class="loading-text">Mengambil data...</div>
+    </div>
+
+    <div class="no-results">
+      <h3>Tidak ada hasil yang ditemukan</h3>
+      <p>Coba kata kunci lain</p>
+    </div>
+  </div>
+
+  <div class="player-minimized hidden" id="playerMini">
+    <div class="now-playing-mini">
+      <img src="/api/placeholder/45/45" alt="Now playing" class="now-thumbnail-mini" id="miniThumbnail" />
+      <div class="now-info">
+        <div class="song-title" id="miniTitle">Judul Lagu</div>
+        <div class="song-artist" id="miniArtist">Nama Artis</div>
+      </div>
+    </div>
+    <div class="mini-controls">
+      <button class="control-btn" id="miniPlayBtn"><i class="fas fa-play"></i></button>
+      <button class="control-btn" id="miniNextBtn"><i class="fas fa-step-forward"></i></button>
+    </div>
+  </div>
+
+  <div class="player-full" id="playerFull">
+    <div class="player-header">
+      <button class="back-btn" id="minimizeBtn"><i class="fas fa-chevron-down"></i></button>
+      <div class="player-title">Now Playing</div>
+      <div style="width: 24px;"></div>
+    </div>
+
+    <div class="player-content">
+      <img src="/api/placeholder/300/300" alt="Now playing" class="now-thumbnail-large" id="fullThumbnail" />
+      <div class="now-info-large">
+        <div class="now-title-large" id="fullTitle">Judul Lagu</div>
+        <div class="now-artist-large" id="fullArtist">Nama Artis</div>
+      </div>
+      <div class="progress-container-large">
+        <div class="progress-bar-large" id="progressBarLarge">
+          <div class="progress-large" id="progressLarge"></div>
+        </div>
+        <div class="time-display">
+          <span id="currentTimeLarge">0:00</span>
+          <span id="totalTimeLarge">0:00</span>
+        </div>
+      </div>
+      <div class="controls-large">
+        <button class="control-btn-large" id="shuffleBtn"><i class="fas fa-random"></i></button>
+        <button class="control-btn-large" id="prevBtnLarge"><i class="fas fa-step-backward"></i></button>
+        <button class="control-btn-large play-btn-large" id="playBtnLarge"><i class="fas fa-play"></i></button>
+        <button class="control-btn-large" id="nextBtnLarge"><i class="fas fa-step-forward"></i></button>
+        <button class="control-btn-large" id="repeatBtn"><i class="fas fa-redo"></i></button>
+      </div>
+      <button class="download-btn" id="downloadBtnLarge"><i class="fas fa-download"></i> Download MP3</button>
+    </div>
+
+    <div class="next-up-container">
+      <h3 class="next-up-title"><i class="fas fa-stream"></i> Next Up</h3>
+      <div class="next-up-list" id="queueList"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p>&copy; <span id="year"></span> <a href="https://github.com/akaanakbaik" target="_blank" rel="noopener noreferrer">Aka</a>. All rights reserved.</p>
+      <p>Built with open-source spirit, inspired by <a href="https://github.com/FlowFalcon" target="_blank" rel="noopener noreferrer">FlowFalcon</a>.</p>
+      <p>Licensed under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+    </div>
+  </footer>
+
+  <audio id="audioPlayer" style="display: none;"></audio>
+
+  <div class="sidebar" id="sidebar">
+    <button class="close-sidebar-btn" id="closeSidebarBtn"><i class="fas fa-times"></i></button>
+    <ul class="sidebar-menu">
+      <li><a href="#" id="sidebarHomeLink"><i class="fas fa-home"></i> Beranda</a></li>
+      <li><a href="#" id="sidebarContributorsLink"><i class="fas fa-users"></i> Kontributor</a></li>
+    </ul>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <script src="js/footer.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    // Update tahun otomatis di footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

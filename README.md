@@ -117,5 +117,5 @@ Modification by Aka
 
 📩 **Kontak**  
 - Email: [furinabyaka@gmail.com](mailto:furinabyaka@gmail.com)  
-- GitHub: [@akaanakbaik](https://github.com/akaanakbaik)  
-- WhatsApp: [+6281266950382](https://wa.me/6281266950382)
+- GitHub: [akaanakbaik](https://github.com/akaanakbaik)  
+- Telegram: [aka](t.me/akamodebaik)

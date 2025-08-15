@@ -1,20 +1,24 @@
 const API_URL = {
-    SEARCH: 'https://api.siputzx.my.id/api/s/youtube',
-    DOWNLOAD_MP3: 'https://api.siputzx.my.id/api/d/ytmp3'
+    SEARCH: 'https://api.fasturl.link/youtube/search',
+    DOWNLOAD_MP3: 'https://api.fasturl.link/downup/ytmp3'
 };
 
 const APP_DEFAULTS = {
     DEFAULT_SEARCH: 'popular songs 2025',
-    MAX_RECENT_ITEMS: 10,
-    MAX_QUEUE_ITEMS: 5,
-    STORAGE_KEY: 'recentlyPlayed'
+    MAX_RECENT_ITEMS: 15,
+    MAX_QUEUE_ITEMS: 8,
+    STORAGE_KEY: 'recentlyPlayed',
+    FAVORITES_KEY: 'favoriteSongs',
+    VOLUME_KEY: 'playerVolume',
+    DEFAULT_QUALITY: '128kbps',
+    SERVER: 'auto'
 };
 
 const CONTRIBUTORS_DATA = [
     {
-        name: 'Siputzx',
+        name: 'FastURL API',
         photo: 'https://cloudkuimages.guru/uploads/images/683f272fb23a0.jpg',
-        description: 'Penyedia Api'
+        description: 'Penyedia API YouTube Search & Download'
     },
     {
         name: 'FlowFalcon',
@@ -30,6 +34,7 @@ const CONTRIBUTORS_DATA = [
 
 const UTILS = {
     formatTime: function(seconds) {
+        if (!seconds || isNaN(seconds)) return '0:00';
         const minutes = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${minutes}:${secs.toString().padStart(2, '0')}`;
@@ -41,13 +46,14 @@ const UTILS = {
     
     formatSong: function(item) {
         return {
-            id: item.videoId || '',
+            id: item.id || item.videoId || '',
             title: item.title || 'Unknown Title',
-            artist: (item.author && item.author.name) ? item.author.name : 'Unknown Artist',
-            thumbnail: item.thumbnail || item.image || '/api/placeholder/300/300',
-            duration: item.seconds || (item.duration ? item.duration.seconds : 0),
-            timestamp: item.timestamp || (item.duration ? item.duration.timestamp : '0:00'),
-            videoUrl: item.url || ''
+            artist: item.channel || item.author || 'Unknown Artist',
+            thumbnail: item.thumbnail || '/api/placeholder/300/300',
+            duration: item.duration || 0,
+            timestamp: item.duration_formatted || '0:00',
+            videoUrl: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+            views: item.views || '0'
         };
     },
     
@@ -57,6 +63,36 @@ const UTILS = {
     },
     
     getDownloadUrl: function(data) {
-        return data && data.dl ? data.dl : null;
+        return data && data.download_url ? data.download_url : null;
+    },
+
+    debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+
+    showNotification: function(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => document.body.removeChild(notification), 300);
+        }, 3000);
     }
 };

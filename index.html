@@ -71,6 +71,10 @@
       <p>Coba kata kunci lain</p>
     </div>
   </div>
+    <div class="volume-container">
+      <button class="volume-btn" id="volumeBtn"><i class="fas fa-volume-up"></i></button>
+      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
+    </div>
 
   <div class="player-minimized hidden" id="playerMini">
     <div class="now-playing-mini">
@@ -138,11 +142,15 @@
     <button class="close-sidebar-btn" id="closeSidebarBtn"><i class="fas fa-times"></i></button>
     <ul class="sidebar-menu">
       <li><a href="#" id="sidebarHomeLink"><i class="fas fa-home"></i> Beranda</a></li>
+      <li><a href="#" id="sidebarFavoritesLink"><i class="fas fa-heart"></i> Favorit</a></li>
       <li><a href="#" id="sidebarContributorsLink"><i class="fas fa-users"></i> Kontributor</a></li>
     </ul>
   </div>
 
   <div class="overlay" id="overlay"></div>
+
+  <!-- Notification Container -->
+  <div class="notification-container" id="notificationContainer"></div>
 
   <script src="js/footer.js"></script>
   <script src="js/config.js"></script>

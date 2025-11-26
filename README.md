@@ -13,6 +13,8 @@ Music Player adalah aplikasi web interaktif yang memungkinkan pengguna mencari, 
 - **Navigasi yang Ditingkatkan** - Memudahkan akses ke berbagai fitur aplikasi.
 - **Optimasi Script** - Peningkatan efisiensi dan performa pemrosesan data.
 - **Penambahan Footer** - Informasi penting dan atribusi dengan desain yang lebih profesional.
+- **UI Modern Tanpa Gradasi** - Tampilan bersih dengan efek parallax lembut tanpa warna samar atau tumpang-tindih.
+- **Fallback Unduhan Otomatis** - Unduhan MP3 berpindah otomatis ke server cadangan saat terjadi kendala.
 
 ## ✨ Features
 
@@ -41,6 +43,7 @@ Music Player adalah aplikasi web interaktif yang memungkinkan pengguna mencari, 
 ```
 music-player/
 │
+├── vercel.json                # Konfigurasi deploy ke Vercel
 ├── css/
 │   ├── ss.jpg                  # gambar preview
 │   └── style.css               # Stylesheet utama
@@ -70,17 +73,30 @@ music-player/
 // API URLs - Basic configuration
 const API_URL = {
     SEARCH: 'https://api.siputzx.my.id/api/s/youtube',
-    DOWNLOAD_MP3: 'https://api.siputzx.my.id/api/d/ytmp3'
+    DOWNLOAD_MP3: 'https://api.nekolabs.web.id/downloader/youtube/v5',
+    DOWNLOAD_MP3_FALLBACK: 'https://api.nekolabs.web.id/downloader/youtube/v4'
 };
 
 // App defaults
 const APP_DEFAULTS = {
-    DEFAULT_SEARCH: 'popular songs 2025',
-    MAX_RECENT_ITEMS: 10,
-    MAX_QUEUE_ITEMS: 5,
+    DEFAULT_SEARCH: 'musik trending terbaru',
+    MAX_RECENT_ITEMS: 15,
+    MAX_QUEUE_ITEMS: 8,
     STORAGE_KEY: 'recentlyPlayed'
 };
 ```
+
+### Deploy ke Vercel
+
+1. Pastikan dependency terpasang:
+   ```bash
+   npm install
+   ```
+2. Login Vercel dan deploy:
+   ```bash
+   npx vercel --prod
+   ```
+   File `vercel.json` sudah menyiapkan build statis untuk `index.html`, folder `css/`, `js/`, dan `media/` agar tidak ada peringatan saat build maupun run.
 
 ## 🔍 Penanganan Error
 

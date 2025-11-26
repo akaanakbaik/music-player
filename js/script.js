@@ -52,6 +52,7 @@ const sidebarHomeLink = document.getElementById('sidebarHomeLink');
 const sidebarContributorsLink = document.getElementById('sidebarContributorsLink');
 const sidebarFavoritesLink = document.getElementById('sidebarFavoritesLink');
 const parallaxShapes = document.querySelectorAll('.parallax-shape');
+let favoritesSectionElement = null;
 
 let currentPlaylist = [];
 let currentSongIndex = 0;
@@ -83,6 +84,9 @@ function hideAllSections() {
     resultsSection.classList.remove('active');
     contributorsSection.style.display = 'none';
     recommendedSection.style.display = 'none';
+    if (favoritesSectionElement) {
+        favoritesSectionElement.style.display = 'none';
+    }
     loadingElement.style.display = 'none';
     noResultsElement.style.display = 'none';
     document.body.classList.remove('page-contributors');
@@ -118,6 +122,10 @@ function hideLoadingState() {
 
 async function searchSongs(query) {
     if (isLoading) return;
+    if (!query || !query.trim()) {
+        UTILS.showNotification('Silakan masukkan kata kunci pencarian', 'info');
+        return;
+    }
     
     hideAllSections();
     showLoadingState('Mencari lagu...');
@@ -279,6 +287,7 @@ function displayResults(songs) {
 
 async function fetchDownloadLink(videoUrl) {
     const endpoints = [API_URL.DOWNLOAD_MP3, API_URL.DOWNLOAD_MP3_FALLBACK];
+    let lastError = null;
 
     for (const endpoint of endpoints) {
         try {
@@ -304,7 +313,12 @@ async function fetchDownloadLink(videoUrl) {
             }
         } catch (error) {
             console.warn(`Gagal mengambil audio dari ${endpoint}:`, error);
+            lastError = error;
         }
+    }
+
+    if (lastError) {
+        UTILS.showNotification('Semua server unduhan sedang bermasalah, coba lagi sebentar.', 'error');
     }
 
     return { audioUrl: null, endpoint: null };
@@ -573,6 +587,21 @@ function setVolume(volume) {
     
     updateVolumeIcon();
     localStorage.setItem(APP_DEFAULTS.VOLUME_KEY, currentVolume.toString());
+}
+
+function ensureFavoritesSection() {
+    if (!favoritesSectionElement) {
+        favoritesSectionElement = document.createElement('div');
+        favoritesSectionElement.className = 'favorites-section';
+        favoritesSectionElement.innerHTML = `
+            <h2 class="section-title"><i class="fas fa-heart"></i> Lagu Favorit</h2>
+            <div class="favorites-container" id="favoritesContainer"></div>
+        `;
+
+        recommendedSection.parentNode.insertBefore(favoritesSectionElement, recommendedSection.nextSibling);
+    }
+
+    return favoritesSectionElement.querySelector('#favoritesContainer');
 }
 
 function updateVolumeIcon() {
@@ -895,19 +924,9 @@ function setupEventListeners() {
 
 function showFavoritesSection() {
     hideAllSections();
-    const favoritesSection = document.createElement('div');
-    favoritesSection.className = 'favorites-section';
-    favoritesSection.innerHTML = `
-        <h2 class="section-title"><i class="fas fa-heart"></i> Lagu Favorit</h2>
-        <div class="favorites-container" id="favoritesContainer"></div>
-    `;
-    
-    // Insert after recommended section
-    recommendedSection.parentNode.insertBefore(favoritesSection, recommendedSection.nextSibling);
-    favoritesSection.style.display = 'block';
-    
-    const favoritesContainer = document.getElementById('favoritesContainer');
-    
+    const favoritesContainer = ensureFavoritesSection();
+    favoritesSectionElement.style.display = 'block';
+
     if (favoriteSongs.length === 0) {
         favoritesContainer.innerHTML = `
             <div class="no-results">

@@ -65,6 +65,7 @@ let currentVolume = 1;
 let isMuted = false;
 let isLoading = false;
 let searchTimeout = null;
+const API_TIMEOUT = 8000;
 
 // Debounced search function
 const debouncedSearch = UTILS.debounce((query) => {
@@ -120,6 +121,20 @@ function hideLoadingState() {
     }
 }
 
+async function fetchWithTimeout(url, options = {}, timeout = API_TIMEOUT) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timer);
+        return response;
+    } catch (error) {
+        clearTimeout(timer);
+        throw error;
+    }
+}
+
 async function searchSongs(query) {
     if (isLoading) return;
     if (!query || !query.trim()) {
@@ -133,22 +148,9 @@ async function searchSongs(query) {
     
     resultsSection.classList.add('active');
     searchResultTitle.textContent = `Hasil Pencarian: "${query}"`;
-    
+
     try {
-        const response = await fetch(`${API_URL.SEARCH}?query=${encodeURIComponent(query)}`, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        const formattedResults = UTILS.formatSearchResults(data.results || data.data || data.items || data);
+        const formattedResults = await fetchSearchResults(query, APP_DEFAULTS.SEARCH_RESULT_COUNT, { allowOfflineFallback: true });
 
         hideLoadingState();
 
@@ -161,9 +163,8 @@ async function searchSongs(query) {
         currentPlaylist = formattedResults;
         displayResults(currentPlaylist);
         UTILS.showNotification(`Ditemukan ${currentPlaylist.length} lagu`, 'success');
-
     } catch (error) {
-        console.error('Error fetching search results:', error);
+        console.error('Pencarian gagal:', error);
         hideLoadingState();
         noResultsElement.style.display = 'block';
         UTILS.showNotification('Gagal mencari lagu. Silakan coba lagi.', 'error');
@@ -178,35 +179,71 @@ async function showRecommendedSongs() {
 
     try {
         const query = APP_DEFAULTS.DEFAULT_SEARCH;
-        const response = await fetch(`${API_URL.SEARCH}?query=${encodeURIComponent(query)}`, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const recommendedSongs = UTILS.formatSearchResults(data.results || data.data || data.items || data);
+        const recommendedSongs = await fetchSearchResults(query, APP_DEFAULTS.RECOMMENDED_COUNT, { allowOfflineFallback: true });
         hideLoadingState();
 
         if (!recommendedSongs || recommendedSongs.length === 0) {
             recommendedList.innerHTML = `<div class="no-results"><p>Tidak ada rekomendasi saat ini.</p></div>`;
+            UTILS.showNotification('Gagal memuat rekomendasi', 'error');
             return;
         }
 
         displaySongsInContainer(recommendedSongs, recommendedList);
         currentPlaylist = recommendedSongs;
-
     } catch (error) {
-        console.error('Error fetching recommended songs:', error);
+        console.error('Gagal memuat rekomendasi:', error);
         hideLoadingState();
-        recommendedList.innerHTML = `<div class="no-results"><p>Gagal mengambil rekomendasi.</p></div>`;
+        recommendedList.innerHTML = `<div class="no-results"><p>Tidak ada rekomendasi saat ini.</p></div>`;
         UTILS.showNotification('Gagal memuat rekomendasi', 'error');
     }
+}
+
+async function fetchSearchResults(query, limit = APP_DEFAULTS.SEARCH_RESULT_COUNT, options = {}) {
+    const { allowOfflineFallback = false } = options;
+    const searchEndpoints = [
+        { url: API_URL.SEARCH, param: 'q', name: 'utama' },
+        { url: API_URL.SEARCH_FALLBACK, param: 'q', name: 'cadangan' }
+    ];
+
+    let lastError = null;
+
+    for (const endpoint of searchEndpoints) {
+        try {
+            const response = await fetchWithTimeout(`${endpoint.url}?${endpoint.param}=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: { 'accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const formattedResults = UTILS.limitSongs(UTILS.formatSearchResults(data), limit);
+
+            if (formattedResults && formattedResults.length > 0) {
+                if (endpoint.url === API_URL.SEARCH_FALLBACK) {
+                    UTILS.showNotification('Beralih ke server pencarian cadangan', 'info');
+                }
+                return formattedResults;
+            }
+
+            lastError = new Error('Hasil kosong');
+        } catch (error) {
+            console.warn(`Gagal mengambil hasil dari server ${endpoint.name}:`, error);
+            lastError = error;
+        }
+    }
+
+    if (allowOfflineFallback) {
+        const offlineResults = UTILS.searchOfflineSongs(query, limit);
+        if (offlineResults.length > 0) {
+            UTILS.showNotification('Menggunakan data lagu offline', 'info');
+            return offlineResults;
+        }
+    }
+    if (lastError) throw lastError;
+    return [];
 }
 
 function displaySongsInContainer(songs, containerElement) {
@@ -285,7 +322,11 @@ function displayResults(songs) {
     displaySongsInContainer(songs, resultsContainer);
 }
 
-async function fetchDownloadLink(videoUrl) {
+async function fetchDownloadLink(videoUrl, song = null) {
+    if (song && song.audioUrl) {
+        return { audioUrl: song.audioUrl, endpoint: 'offline' };
+    }
+
     const endpoints = [API_URL.DOWNLOAD_MP3, API_URL.DOWNLOAD_MP3_FALLBACK];
     let lastError = null;
 
@@ -337,7 +378,7 @@ async function playSong(index) {
             throw new Error('Tautan video tidak tersedia');
         }
 
-        const { audioUrl } = await fetchDownloadLink(song.videoUrl);
+        const { audioUrl } = await fetchDownloadLink(song.videoUrl, song);
 
         if (!audioUrl) {
             throw new Error('Failed to get audio URL');
@@ -635,7 +676,7 @@ async function downloadCurrentSong() {
             throw new Error('Tautan video tidak tersedia');
         }
 
-        const { audioUrl } = await fetchDownloadLink(song.videoUrl);
+        const { audioUrl } = await fetchDownloadLink(song.videoUrl, song);
 
         hideLoadingState();
 

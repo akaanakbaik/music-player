@@ -1,10 +1,11 @@
 const API_URL = {
-    SEARCH: 'https://api.fasturl.link/youtube/search',
-    DOWNLOAD_MP3: 'https://api.fasturl.link/downup/ytmp3'
+    SEARCH: 'https://api.siputzx.my.id/api/s/youtube',
+    DOWNLOAD_MP3: 'https://api.nekolabs.web.id/downloader/youtube/v5',
+    DOWNLOAD_MP3_FALLBACK: 'https://api.nekolabs.web.id/downloader/youtube/v4'
 };
 
 const APP_DEFAULTS = {
-    DEFAULT_SEARCH: 'popular songs 2025',
+    DEFAULT_SEARCH: 'musik trending terbaru',
     MAX_RECENT_ITEMS: 15,
     MAX_QUEUE_ITEMS: 8,
     STORAGE_KEY: 'recentlyPlayed',
@@ -39,31 +40,73 @@ const UTILS = {
         const secs = Math.floor(seconds % 60);
         return `${minutes}:${secs.toString().padStart(2, '0')}`;
     },
+
+    parseDuration: function(duration) {
+        if (!duration) return 0;
+
+        if (typeof duration === 'number') {
+            return duration;
+        }
+
+        const timeParts = duration.split(':').map(part => parseInt(part, 10));
+        if (timeParts.length === 3) {
+            return timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
+        }
+
+        if (timeParts.length === 2) {
+            return timeParts[0] * 60 + timeParts[1];
+        }
+
+        return 0;
+    },
     
     needsScrolling: function(text, maxLength = 20) {
         return text && text.length > maxLength;
     },
     
     formatSong: function(item) {
+        const durationInSeconds = this.parseDuration(item.duration || item.duration_raw || item.timestamp);
+        const videoId = item.id || item.videoId || item.video_id || '';
+
         return {
-            id: item.id || item.videoId || '',
+            id: videoId,
             title: item.title || 'Unknown Title',
-            artist: item.channel || item.author || 'Unknown Artist',
-            thumbnail: item.thumbnail || '/api/placeholder/300/300',
-            duration: item.duration || 0,
-            timestamp: item.duration_formatted || '0:00',
-            videoUrl: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+            artist: item.channel || item.author || item.uploader || 'Unknown Artist',
+            thumbnail: item.thumbnail || item.thumbnail_url || item.image || '/api/placeholder/300/300',
+            duration: durationInSeconds,
+            timestamp: item.duration_formatted || item.timestamp || this.formatTime(durationInSeconds) || '0:00',
+            videoUrl: item.url || item.link || item.videoUrl || (videoId ? `https://www.youtube.com/watch?v=${videoId}` : ''),
             views: item.views || '0'
         };
     },
-    
+
     formatSearchResults: function(items) {
-        if (!Array.isArray(items)) return [];
-        return items.map(item => this.formatSong(item));
+        if (!items) return [];
+
+        const sourceItems = Array.isArray(items)
+            ? items
+            : Array.isArray(items.data)
+                ? items.data
+                : Array.isArray(items.results)
+                    ? items.results
+                    : Array.isArray(items.items)
+                        ? items.items
+                        : [];
+
+        return sourceItems.map(item => this.formatSong(item));
     },
     
     getDownloadUrl: function(data) {
-        return data && data.download_url ? data.download_url : null;
+        if (!data) return null;
+
+        if (data.download_url) return data.download_url;
+        if (data.url) return data.url;
+        if (data.result && data.result.download_url) return data.result.download_url;
+        if (data.result && data.result.url) return data.result.url;
+        if (data.data && data.data.download_url) return data.data.download_url;
+        if (data.data && data.data.url) return data.data.url;
+
+        return null;
     },
 
     debounce: function(func, wait) {

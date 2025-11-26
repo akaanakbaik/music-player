@@ -51,6 +51,8 @@ const overlay = document.getElementById('overlay');
 const sidebarHomeLink = document.getElementById('sidebarHomeLink');
 const sidebarContributorsLink = document.getElementById('sidebarContributorsLink');
 const sidebarFavoritesLink = document.getElementById('sidebarFavoritesLink');
+const parallaxShapes = document.querySelectorAll('.parallax-shape');
+let favoritesSectionElement = null;
 
 let currentPlaylist = [];
 let currentSongIndex = 0;
@@ -82,6 +84,9 @@ function hideAllSections() {
     resultsSection.classList.remove('active');
     contributorsSection.style.display = 'none';
     recommendedSection.style.display = 'none';
+    if (favoritesSectionElement) {
+        favoritesSectionElement.style.display = 'none';
+    }
     loadingElement.style.display = 'none';
     noResultsElement.style.display = 'none';
     document.body.classList.remove('page-contributors');
@@ -117,6 +122,10 @@ function hideLoadingState() {
 
 async function searchSongs(query) {
     if (isLoading) return;
+    if (!query || !query.trim()) {
+        UTILS.showNotification('Silakan masukkan kata kunci pencarian', 'info');
+        return;
+    }
     
     hideAllSections();
     showLoadingState('Mencari lagu...');
@@ -132,25 +141,27 @@ async function searchSongs(query) {
                 'accept': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
+        const formattedResults = UTILS.formatSearchResults(data.results || data.data || data.items || data);
+
         hideLoadingState();
-        
-        if (!data || !data.results || !Array.isArray(data.results) || data.results.length === 0) {
+
+        if (!formattedResults || formattedResults.length === 0) {
             noResultsElement.style.display = 'block';
             UTILS.showNotification('Tidak ada hasil ditemukan untuk pencarian ini', 'info');
             return;
         }
-        
-        currentPlaylist = UTILS.formatSearchResults(data.results);
+
+        currentPlaylist = formattedResults;
         displayResults(currentPlaylist);
         UTILS.showNotification(`Ditemukan ${currentPlaylist.length} lagu`, 'success');
-        
+
     } catch (error) {
         console.error('Error fetching search results:', error);
         hideLoadingState();
@@ -179,17 +190,17 @@ async function showRecommendedSongs() {
         }
 
         const data = await response.json();
+        const recommendedSongs = UTILS.formatSearchResults(data.results || data.data || data.items || data);
         hideLoadingState();
 
-        if (!data || !data.results || !Array.isArray(data.results) || data.results.length === 0) {
+        if (!recommendedSongs || recommendedSongs.length === 0) {
             recommendedList.innerHTML = `<div class="no-results"><p>Tidak ada rekomendasi saat ini.</p></div>`;
             return;
         }
 
-        const recommendedSongs = UTILS.formatSearchResults(data.results);
         displaySongsInContainer(recommendedSongs, recommendedList);
         currentPlaylist = recommendedSongs;
-        
+
     } catch (error) {
         console.error('Error fetching recommended songs:', error);
         hideLoadingState();
@@ -274,31 +285,60 @@ function displayResults(songs) {
     displaySongsInContainer(songs, resultsContainer);
 }
 
+async function fetchDownloadLink(videoUrl) {
+    const endpoints = [API_URL.DOWNLOAD_MP3, API_URL.DOWNLOAD_MP3_FALLBACK];
+    let lastError = null;
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(`${endpoint}?url=${encodeURIComponent(videoUrl)}`, {
+                method: 'GET',
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const audioUrl = UTILS.getDownloadUrl(data);
+
+            if (audioUrl) {
+                if (endpoint === API_URL.DOWNLOAD_MP3_FALLBACK) {
+                    UTILS.showNotification('Berhasil beralih ke server cadangan', 'info');
+                }
+                return { audioUrl, endpoint };
+            }
+        } catch (error) {
+            console.warn(`Gagal mengambil audio dari ${endpoint}:`, error);
+            lastError = error;
+        }
+    }
+
+    if (lastError) {
+        UTILS.showNotification('Semua server unduhan sedang bermasalah, coba lagi sebentar.', 'error');
+    }
+
+    return { audioUrl: null, endpoint: null };
+}
+
 async function playSong(index) {
     if (index < 0 || index >= currentPlaylist.length || isLoading) return;
-    
+
     currentSongIndex = index;
     const song = currentPlaylist[index];
-    
+
     showLoadingState('Memuat audio...');
-    
+
     try {
-        const downloadUrl = `${API_URL.DOWNLOAD_MP3}?url=${encodeURIComponent(song.videoUrl)}&quality=${APP_DEFAULTS.DEFAULT_QUALITY}&server=${APP_DEFAULTS.SERVER}`;
-        
-        const response = await fetch(downloadUrl, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!song.videoUrl) {
+            throw new Error('Tautan video tidak tersedia');
         }
-        
-        const data = await response.json();
-        const audioUrl = UTILS.getDownloadUrl(data);
-        
+
+        const { audioUrl } = await fetchDownloadLink(song.videoUrl);
+
         if (!audioUrl) {
             throw new Error('Failed to get audio URL');
         }
@@ -549,6 +589,21 @@ function setVolume(volume) {
     localStorage.setItem(APP_DEFAULTS.VOLUME_KEY, currentVolume.toString());
 }
 
+function ensureFavoritesSection() {
+    if (!favoritesSectionElement) {
+        favoritesSectionElement = document.createElement('div');
+        favoritesSectionElement.className = 'favorites-section';
+        favoritesSectionElement.innerHTML = `
+            <h2 class="section-title"><i class="fas fa-heart"></i> Lagu Favorit</h2>
+            <div class="favorites-container" id="favoritesContainer"></div>
+        `;
+
+        recommendedSection.parentNode.insertBefore(favoritesSectionElement, recommendedSection.nextSibling);
+    }
+
+    return favoritesSectionElement.querySelector('#favoritesContainer');
+}
+
 function updateVolumeIcon() {
     if (!volumeBtn) return;
     
@@ -572,28 +627,18 @@ async function downloadCurrentSong() {
     if (currentPlaylist.length === 0 || currentSongIndex < 0 || isLoading) return;
     
     const song = currentPlaylist[currentSongIndex];
-    
+
     showLoadingState('Menyiapkan download...');
-    
+
     try {
-        const downloadUrl = `${API_URL.DOWNLOAD_MP3}?url=${encodeURIComponent(song.videoUrl)}&quality=${APP_DEFAULTS.DEFAULT_QUALITY}&server=${APP_DEFAULTS.SERVER}`;
-        
-        const response = await fetch(downloadUrl, {
-            method: 'GET',
-            headers: {
-                'accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!song.videoUrl) {
+            throw new Error('Tautan video tidak tersedia');
         }
-        
-        const data = await response.json();
-        const audioUrl = UTILS.getDownloadUrl(data);
-        
+
+        const { audioUrl } = await fetchDownloadLink(song.videoUrl);
+
         hideLoadingState();
-        
+
         if (audioUrl) {
             const link = document.createElement('a');
             link.href = audioUrl;
@@ -683,9 +728,27 @@ function closeSidebar() {
     document.body.classList.remove('sidebar-open');
 }
 
+function handleParallax() {
+    if (!parallaxShapes.length) return;
+
+    const scrollY = window.scrollY;
+
+    parallaxShapes.forEach((shape) => {
+        const speed = parseFloat(shape.dataset.speed) || 0.3;
+        shape.style.transform = `translate3d(0, ${scrollY * speed}px, 0)`;
+        shape.style.opacity = Math.max(0.35, 1 - scrollY / 800);
+    });
+}
+
+function initParallax() {
+    handleParallax();
+    window.addEventListener('scroll', handleParallax, { passive: true });
+}
+
 function initApp() {
     loadStoredData();
     showWelcomePanel();
+    initParallax();
     
     if (!welcomePanel.classList.contains('show')) {
         setTimeout(() => {
@@ -861,19 +924,9 @@ function setupEventListeners() {
 
 function showFavoritesSection() {
     hideAllSections();
-    const favoritesSection = document.createElement('div');
-    favoritesSection.className = 'favorites-section';
-    favoritesSection.innerHTML = `
-        <h2 class="section-title"><i class="fas fa-heart"></i> Lagu Favorit</h2>
-        <div class="favorites-container" id="favoritesContainer"></div>
-    `;
-    
-    // Insert after recommended section
-    recommendedSection.parentNode.insertBefore(favoritesSection, recommendedSection.nextSibling);
-    favoritesSection.style.display = 'block';
-    
-    const favoritesContainer = document.getElementById('favoritesContainer');
-    
+    const favoritesContainer = ensureFavoritesSection();
+    favoritesSectionElement.style.display = 'block';
+
     if (favoriteSongs.length === 0) {
         favoritesContainer.innerHTML = `
             <div class="no-results">

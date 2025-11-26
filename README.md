@@ -13,6 +13,8 @@ Music Player adalah aplikasi web interaktif yang memungkinkan pengguna mencari, 
 - **Navigasi yang Ditingkatkan** - Memudahkan akses ke berbagai fitur aplikasi.
 - **Optimasi Script** - Peningkatan efisiensi dan performa pemrosesan data.
 - **Penambahan Footer** - Informasi penting dan atribusi dengan desain yang lebih profesional.
+- **UI Modern Tanpa Gradasi** - Tampilan bersih dengan efek parallax lembut tanpa warna samar atau tumpang-tindih.
+- **Fallback Unduhan Otomatis** - Unduhan MP3 berpindah otomatis ke server cadangan saat terjadi kendala.
 
 ## ✨ Features
 
@@ -41,6 +43,8 @@ Music Player adalah aplikasi web interaktif yang memungkinkan pengguna mencari, 
 ```
 music-player/
 │
+├── vercel.json                # Konfigurasi deploy ke Vercel
+├── public/                    # Output build statis (hasil `npm run build`)
 ├── css/
 │   ├── ss.jpg                  # gambar preview
 │   └── style.css               # Stylesheet utama
@@ -52,7 +56,7 @@ music-player/
 └── README.md                   # Dokumentasi project
 ```
 
-## ⚡ Instalasi
+## ⚡ Instalasi & Build
 
 1. Clone repository:
    ```bash
@@ -62,7 +66,18 @@ music-player/
    ```bash
    cd music-player
    ```
-3. Jalankan aplikasi melalui `index.html` di browser Anda.
+3. Siapkan dependensi lokal (opsional untuk server dev):
+   ```bash
+   npm install
+   ```
+4. Bangun output statis ke direktori `public/`:
+   ```bash
+   npm run build
+   ```
+5. Jalankan aplikasi melalui `index.html` di browser Anda atau gunakan server dev:
+   ```bash
+   npm run dev
+   ```
 
 ## 🧰 Konfigurasi API
 
@@ -70,17 +85,34 @@ music-player/
 // API URLs - Basic configuration
 const API_URL = {
     SEARCH: 'https://api.siputzx.my.id/api/s/youtube',
-    DOWNLOAD_MP3: 'https://api.siputzx.my.id/api/d/ytmp3'
+    DOWNLOAD_MP3: 'https://api.nekolabs.web.id/downloader/youtube/v5',
+    DOWNLOAD_MP3_FALLBACK: 'https://api.nekolabs.web.id/downloader/youtube/v4'
 };
 
 // App defaults
 const APP_DEFAULTS = {
-    DEFAULT_SEARCH: 'popular songs 2025',
-    MAX_RECENT_ITEMS: 10,
-    MAX_QUEUE_ITEMS: 5,
+    DEFAULT_SEARCH: 'musik trending terbaru',
+    MAX_RECENT_ITEMS: 15,
+    MAX_QUEUE_ITEMS: 8,
     STORAGE_KEY: 'recentlyPlayed'
 };
 ```
+
+### Deploy ke Vercel
+
+1. Pastikan dependency terpasang:
+   ```bash
+   npm install
+   ```
+2. Bangun output statis agar direktori `public/` tersedia:
+   ```bash
+   npm run build
+   ```
+3. Login Vercel dan deploy:
+   ```bash
+   npx vercel --prod
+   ```
+   File `vercel.json` sudah menyiapkan command build (`npm run build`), direktori output `public/`, header keamanan, clean URL, dan rewrite untuk SPA sehingga menghindari error "Missing public directory" atau peringatan routing saat deploy.
 
 ## 🔍 Penanganan Error
 

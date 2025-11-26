@@ -44,6 +44,7 @@ Music Player adalah aplikasi web interaktif yang memungkinkan pengguna mencari, 
 music-player/
 │
 ├── vercel.json                # Konfigurasi deploy ke Vercel
+├── public/                    # Output build statis (hasil `npm run build`)
 ├── css/
 │   ├── ss.jpg                  # gambar preview
 │   └── style.css               # Stylesheet utama
@@ -55,7 +56,7 @@ music-player/
 └── README.md                   # Dokumentasi project
 ```
 
-## ⚡ Instalasi
+## ⚡ Instalasi & Build
 
 1. Clone repository:
    ```bash
@@ -65,7 +66,18 @@ music-player/
    ```bash
    cd music-player
    ```
-3. Jalankan aplikasi melalui `index.html` di browser Anda.
+3. Siapkan dependensi lokal (opsional untuk server dev):
+   ```bash
+   npm install
+   ```
+4. Bangun output statis ke direktori `public/`:
+   ```bash
+   npm run build
+   ```
+5. Jalankan aplikasi melalui `index.html` di browser Anda atau gunakan server dev:
+   ```bash
+   npm run dev
+   ```
 
 ## 🧰 Konfigurasi API
 
@@ -92,11 +104,15 @@ const APP_DEFAULTS = {
    ```bash
    npm install
    ```
-2. Login Vercel dan deploy:
+2. Bangun output statis agar direktori `public/` tersedia:
+   ```bash
+   npm run build
+   ```
+3. Login Vercel dan deploy:
    ```bash
    npx vercel --prod
    ```
-   File `vercel.json` sudah menyiapkan build statis untuk `index.html`, folder `css/`, `js/`, dan `media/` agar tidak ada peringatan saat build maupun run.
+   File `vercel.json` sudah menyiapkan command build (`npm run build`), direktori output `public/`, header keamanan, clean URL, dan rewrite untuk SPA sehingga menghindari error "Missing public directory" atau peringatan routing saat deploy.
 
 ## 🔍 Penanganan Error
 

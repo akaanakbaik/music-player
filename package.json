@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "http-server -c-1 -p 4173",
-    "start": "http-server -p 4173"
+    "start": "http-server -p 4173",
+    "build": "rm -rf public && mkdir -p public && cp -r index.html css js media google0dec390922f9d6d9.html public/"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
